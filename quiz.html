@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lunch Preference</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --primary-hover: #1e293b;
+      --primary-accent: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-focus: #94a3b8;
+      --danger: #b91c1c;
+      --radius: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #f8fafc;
+        --primary-hover: #e2e8f0;
+        --primary-accent: #3b82f6;
+        --bg: #090d16;
+        --card-bg: #111827;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #1f2937;
+        --border-focus: #4b5563;
+        --danger: #ef4444;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px 16px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
+    .container { width: 100%; max-width: 520px; margin: 0 auto; padding-bottom: 40px; }
+    
+    .header { text-align: left; margin-bottom: 20px; padding-top: 8px; }
+    .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .header p { color: var(--text-muted); font-size: 14px; line-height: 1.4; }
+
+    /* Progress Indicator */
+    .progress-bar-container { background: var(--border); border-radius: 999px; height: 4px; margin-bottom: 24px; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--primary-accent); width: 16.6%; transition: width 0.25s ease; }
+
+    /* Card / Steps */
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 20px; }
+    .step { display: none; }
+    .step.active { display: block; animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .step-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .step-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .step-number { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .step-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+
+    /* Form Fields */
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .form-control { width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: transparent; color: var(--text); outline: none; transition: border-color 0.15s; }
+    .form-control:focus { border-color: var(--primary-accent); }
+    .help-text { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Pill Selection Grids */
+    .pill-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+    .pill-checkbox { position: relative; display: block; }
+    .pill-checkbox input { position: absolute; opacity: 0; cursor: pointer; }
+    .pill-label { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s ease; user-select: none; }
+    .pill-label:hover { border-color: var(--border-focus); }
+    .pill-checkbox input:checked + .pill-label { border-color: var(--primary-accent); background: rgba(37, 99, 235, 0.05); font-weight: 600; color: var(--primary-accent); }
+    .pill-checkbox.danger input:checked + .pill-label { border-color: var(--danger); background: rgba(185, 28, 28, 0.05); color: var(--danger); }
+    .pill-checkbox.accent input:checked + .pill-label { border-color: #d97706; background: rgba(217, 119, 6, 0.05); color: #b45309; }
+    .check-mark { font-size: 11px; font-weight: 700; opacity: 0; }
+    .pill-checkbox input:checked + .pill-label .check-mark { opacity: 1; }
+
+    /* Section Subcard */
+    .subcard { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 8px; margin-bottom: 14px; }
+    .subcard-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+
+    /* Rating Rows */
+    .rating-item { padding: 11px 0; border-bottom: 1px solid var(--border); }
+    .rating-item:last-child { border-bottom: none; }
+    .rating-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; font-size: 13px; font-weight: 600; }
+    .rating-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .rating-btn { padding: 7px 4px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .rating-btn:hover { background: rgba(0,0,0,0.02); }
+    .rating-btn.active-love { background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 700; }
+    .rating-btn.active-like { background: #eff6ff; border-color: #93c5fd; color: #1e40af; font-weight: 700; }
+    .rating-btn.active-neutral { background: #f8fafc; border-color: #cbd5e1; color: #475569; font-weight: 600; }
+    .rating-btn.active-dislike { background: #fff1f2; border-color: #fca5a5; color: #9f1239; font-weight: 700; }
+    @media (prefers-color-scheme: dark) {
+      .rating-btn.active-love { background: #064e3b; border-color: #059669; color: #a7f3d0; }
+      .rating-btn.active-like { background: #1e3a8a; border-color: #2563eb; color: #bfdbfe; }
+      .rating-btn.active-neutral { background: #1f2937; border-color: #374151; color: #d1d5db; }
+      .rating-btn.active-dislike { background: #881337; border-color: #e11d48; color: #fecdd3; }
+    }
+
+    /* Navigation Buttons */
+    .button-row { display: flex; gap: 10px; margin-top: 24px; }
+    .btn { flex: 1; padding: 12px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; border: 1px solid transparent; transition: all 0.15s ease; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-primary { background: #0f172a; color: #ffffff; }
+    .btn-primary:hover { background: #1e293b; }
+    .btn-secondary { background: transparent; border-color: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: rgba(0,0,0,0.03); }
+    @media (prefers-color-scheme: dark) {
+      .btn-primary { background: #f8fafc; color: #0f172a; }
+      .btn-primary:hover { background: #e2e8f0; }
+    }
+
+    /* Summary Card */
+    .summary-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 16px 0; font-size: 13px; line-height: 1.7; }
+    .summary-title { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 15px; }
+    .summary-tag { display: inline-block; background: var(--card-bg); border: 1px solid var(--border); padding: 2px 7px; border-radius: 5px; font-size: 12px; margin: 2px; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #ffffff; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Lunch Preference</h1>
+    <p>Configure automated school lunch choices, allergies, and station filters.</p>
+  </div>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="card">
+    <!-- STEP 1: Basic Info -->
+    <div class="step active" id="step1">
+      <div class="step-header">
+        <div class="step-title">Student Identification</div>
+        <div class="step-number">Step 1 of 6</div>
+      </div>
+      <div class="step-desc">Enter student details for automated ordering confirmations.</div>
+
+      <div class="form-group">
+        <label for="studentNo">Student ID (學號) *</label>
+        <input type="text" id="studentNo" class="form-control" placeholder="e.g. S14365" required>
+      </div>
+
+      <div class="form-group">
+        <label for="studentName">Name</label>
+        <input type="text" id="studentName" class="form-control" placeholder="e.g. Heidi">
+      </div>
+
+      <div class="form-group">
+        <label for="studentPassword">Lunch Portal Password (訂餐系統密碼) *</label>
+        <div style="position: relative; display: flex; align-items: center;">
+          <input type="password" id="studentPassword" class="form-control" placeholder="Enter school portal password" style="padding-right: 60px;" required>
+          <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility()" style="position: absolute; right: 10px; background: transparent; border: none; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; padding: 6px;">Show</button>
+        </div>
+        <div class="help-text">Used by LunchBot to log into the school portal and place weekly orders. Stored securely with AES-256 encryption.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="studentEmail">Notification Email (學生信箱) *</label>
+        <input type="email" id="studentEmail" class="form-control" placeholder="e.g. S14365@kcis.com.tw" required>
+        <div class="help-text">Order receipts and selections are sent here each week.</div>
+      </div>
+
+      <div class="button-row">
+        <button type="button" class="btn btn-primary" onclick="goToStep(2)">Next: Stations & Allergies</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Station Restrictions & Allergies -->
+    <div class="step" id="step2">
+      <div class="step-header">
+        <div class="step-title">Stations & Allergies</div>
+        <div class="step-number">Step 2 of 6</div>
+      </div>
+      <div class="step-desc">Filter specific school stations and specify ingredients to avoid completely.</div>
+
+      <div class="form-group">
+        <label>Station Preferences (檔口偏好)</label>
+        
+        <!-- Stations 06 & 07 -->
+        <div class="subcard">
+          <div class="subcard-title">Stations 06 & 07 (雅米輕食 / 大力麵坊 - Pasta & Western)</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label class="pill-checkbox">
+              <input type="radio" name="station_6_7_mode" value="normal" checked onchange="onStationModeChange()">
+              <span class="pill-label">
+                <span>Standard (Allow Stations 06 & 07)</span>
+                <span class="check-mark">[OK]</span>
+              </span>
+            </label>
+            <label class="pill-checkbox accent">
+              <input type="radio" name="station_6_7_mode" value="only" onchange="onStationModeChange()">
+              <span class="pill-label">
+                <span>Only Stations 06 & 07 (Only Western / Pasta)</span>
+                <span class="check-mark">[OK]</span>
+              </span>
+            </label>
+            <label class="pill-checkbox danger">
+              <input type="radio" name="station_6_7_mode" value="exclude" onchange="onStationModeChange()">
+              <span class="pill-label">
+                <span>Not Stations 06 & 07 (Exclude Western / Pasta)</span>
+                <span class="check-mark">[OK]</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Station 08 Buffet -->
+        <div class="subcard">
+          <div class="subcard-title">Station 08 (自助餐 - Buffet)</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label class="pill-checkbox">
+              <input type="radio" name="buffet_mode" value="all" checked onchange="onBuffetModeChange()">
+              <span class="pill-label">
+                <span>Standard (Allow Buffet)</span>
+                <span class="check-mark">[OK]</span>
+              </span>
+            </label>
+            <label class="pill-checkbox accent">
+              <input type="radio" name="buffet_mode" value="buffet_only" onchange="onBuffetModeChange()">
+              <span class="pill-label">
+                <span>Station 08 Only (Buffet Only)</span>
+                <span class="check-mark">[OK]</span>
+              </span>
+            </label>
+            <label class="pill-checkbox danger">
+              <input type="radio" name="buffet_mode" value="no_buffet" onchange="onBuffetModeChange()">
+              <span class="pill-label">
+                <span>Not Station 08 (Exclude Buffet)</span>
+                <span class="check-mark">[OK]</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Allergens (過敏原 - Strict Exclusion):</label>
+        <div class="pill-grid">
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="peanut">
+            <span class="pill-label">Peanut (花生) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="shellfish">
+            <span class="pill-label">Shellfish (甲殼/蝦蟹) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="milk">
+            <span class="pill-label">Dairy (牛奶/乳品) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="egg">
+            <span class="pill-label">Egg (雞蛋) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="fish">
+            <span class="pill-label">Fish (魚類) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="gluten">
+            <span class="pill-label">Gluten (麩質) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="soy">
+            <span class="pill-label">Soy (大豆) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="treenut">
+            <span class="pill-label">Tree Nuts (堅果) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="sesame">
+            <span class="pill-label">Sesame (芝麻) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="allergens" value="pork">
+            <span class="pill-label">Pork (豬肉) <span class="check-mark">[x]</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Hard Dislikes (Never Order / 絕對不吃):</label>
+        <div class="pill-grid">
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="hard_excludes" value="苦瓜">
+            <span class="pill-label">Bitter Melon (苦瓜) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="hard_excludes" value="茄子">
+            <span class="pill-label">Eggplant (茄子) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="hard_excludes" value="青椒">
+            <span class="pill-label">Green Pepper (青椒) <span class="check-mark">[x]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="checkbox" name="hard_excludes" value="米粉">
+            <span class="pill-label">Rice Noodles (米粉) <span class="check-mark">[x]</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="customExcludes">Other Excluded Keywords (其他不吃的詞彙):</label>
+        <input type="text" id="customExcludes" class="form-control" placeholder="Comma separated, e.g. 羊肉, 香菜, taro">
+      </div>
+
+      <div class="button-row">
+        <button type="button" class="btn btn-secondary" onclick="goToStep(1)">Back</button>
+        <button type="button" class="btn btn-primary" onclick="goToStep(3)">Next: Proteins</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Proteins -->
+    <div class="step" id="step3">
+      <div class="step-header">
+        <div class="step-title">Protein Preferences</div>
+        <div class="step-number">Step 3 of 6</div>
+      </div>
+      <div class="step-desc">Rate your preference for each main meat and protein source.</div>
+
+      <div id="proteinRatings"></div>
+
+      <div class="button-row">
+        <button type="button" class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+        <button type="button" class="btn btn-primary" onclick="goToStep(4)">Next: Carbs & Cuisines</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Carbs & Cuisines -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-title">Carbs & Cuisines</div>
+        <div class="step-number">Step 4 of 6</div>
+      </div>
+      <div class="step-desc">Specify preferred carb bases and regional cuisine styles.</div>
+
+      <div class="form-group">
+        <label>Carb Bases (主食):</label>
+        <div id="baseRatings"></div>
+      </div>
+
+      <div class="form-group" style="margin-top: 20px;">
+        <label>Cuisine Styles (料理風格):</label>
+        <div id="cuisineRatings"></div>
+      </div>
+
+      <div class="button-row">
+        <button type="button" class="btn btn-secondary" onclick="goToStep(3)">Back</button>
+        <button type="button" class="btn btn-primary" onclick="goToStep(5)">Next: Flavors</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: Flavors & Dish Cravings -->
+    <div class="step" id="step5">
+      <div class="step-header">
+        <div class="step-title">Flavor & Cravings</div>
+        <div class="step-number">Step 5 of 6</div>
+      </div>
+      <div class="step-desc">Fine-tune flavor tolerance and bonus preference keywords.</div>
+
+      <div class="form-group">
+        <label>Spice Tolerance (辣度):</label>
+        <div class="pill-grid">
+          <label class="pill-checkbox">
+            <input type="radio" name="spice" value="3">
+            <span class="pill-label">Love Spicy (愛吃辣) <span class="check-mark">[OK]</span></span>
+          </label>
+          <label class="pill-checkbox">
+            <input type="radio" name="spice" value="0">
+            <span class="pill-label">Mild / Normal (微辣或無) <span class="check-mark">[OK]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="radio" name="spice" value="-3" checked>
+            <span class="pill-label">No Spicy (不吃辣) <span class="check-mark">[OK]</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Fried Food (炸物):</label>
+        <div class="pill-grid">
+          <label class="pill-checkbox">
+            <input type="radio" name="fried" value="2">
+            <span class="pill-label">Love Fried (偏好炸物) <span class="check-mark">[OK]</span></span>
+          </label>
+          <label class="pill-checkbox">
+            <input type="radio" name="fried" value="0" checked>
+            <span class="pill-label">Neutral (正常) <span class="check-mark">[OK]</span></span>
+          </label>
+          <label class="pill-checkbox danger">
+            <input type="radio" name="fried" value="-2">
+            <span class="pill-label">Avoid Fried (少吃炸物) <span class="check-mark">[OK]</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Favorite Dish Keywords (加分關鍵字):</label>
+        <div class="pill-grid" id="keywordPills">
+          <label class="pill-checkbox"><input type="checkbox" name="keywords" value="咖哩" checked><span class="pill-label">Curry (咖哩) <span class="check-mark">[x]</span></span></label>
+          <label class="pill-checkbox"><input type="checkbox" name="keywords" value="照燒" checked><span class="pill-label">Teriyaki (照燒) <span class="check-mark">[x]</span></span></label>
+          <label class="pill-checkbox"><input type="checkbox" name="keywords" value="泡菜"><span class="pill-label">Kimchi (泡菜) <span class="check-mark">[x]</span></span></label>
+          <label class="pill-checkbox"><input type="checkbox" name="keywords" value="起司"><span class="pill-label">Cheese (起司) <span class="check-mark">[x]</span></span></label>
+          <label class="pill-checkbox"><input type="checkbox" name="keywords" value="炸雞" checked><span class="pill-label">Fried Chicken (炸雞) <span class="check-mark">[x]</span></span></label>
+          <label class="pill-checkbox"><input type="checkbox" name="keywords" value="義大利麵" checked><span class="pill-label">Pasta (義大利麵) <span class="check-mark">[x]</span></span></label>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button type="button" class="btn btn-secondary" onclick="goToStep(4)">Back</button>
+        <button type="button" class="btn btn-primary" onclick="renderSummary(); goToStep(6)">Review Preferences</button>
+      </div>
+    </div>
+
+    <!-- STEP 6: Summary & Export -->
+    <div class="step" id="step6">
+      <div class="step-header">
+        <div class="step-title">Preference Summary</div>
+        <div class="step-number">Step 6 of 6</div>
+      </div>
+      <div class="step-desc">Your preference profile is ready. Copy or send the code to Heidi.</div>
+
+      <div class="summary-box" id="summaryBox"></div>
+
+      <div class="button-row" style="flex-direction: column;">
+        <button type="button" class="btn btn-primary" onclick="copyPreferences()">
+          Copy Preference Code
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="emailHeidi()">
+          Send via Email to Heidi
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="downloadJSON()">
+          Download Profile (.json)
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnSubmitDirect" onclick="submitDirectly()" style="display: none;">
+          Submit to LunchBot Server
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="goToStep(1)">
+          Edit Answers
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Preferences copied to clipboard.</div>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 6;
+
+  const proteins = [
+    { key: "chicken", label: "Chicken (雞肉)", default: "like" },
+    { key: "pork", label: "Pork (豬肉)", default: "like" },
+    { key: "beef", label: "Beef (牛肉)", default: "love" },
+    { key: "fish", label: "Fish (魚肉)", default: "like" },
+    { key: "seafood", label: "Seafood (蝦蟹海鮮)", default: "like" },
+    { key: "egg", label: "Eggs (蛋料理)", default: "like" },
+    { key: "tofu", label: "Tofu (豆腐/豆製品)", default: "neutral" }
+  ];
+
+  const bases = [
+    { key: "rice", label: "Rice (白飯)", default: "love" },
+    { key: "noodle", label: "Noodles (麵食)", default: "like" },
+    { key: "soup", label: "Soup (濃湯/羹湯)", default: "like" },
+    { key: "bread", label: "Bread (麵包/堡類)", default: "dislike" }
+  ];
+
+  const cuisines = [
+    { key: "japanese", label: "Japanese (日式料理)", default: "love" },
+    { key: "taiwanese", label: "Taiwanese (台式料理)", default: "like" },
+    { key: "western", label: "Western (西式/義麵)", default: "like" },
+    { key: "chinese", label: "Chinese (中華料理)", default: "like" },
+    { key: "southeast_asian", label: "Southeast Asian (泰式/南洋)", default: "neutral" },
+    { key: "korean", label: "Korean (韓式料理)", default: "dislike" }
+  ];
+
+  const ratingWeights = {
+    love: 4,
+    like: 2,
+    neutral: 0,
+    dislike: -2
+  };
+
+  const ratingsState = {
+    proteins: {},
+    bases: {},
+    cuisines: {}
+  };
+
+  function createRatingRows(items, containerId, category) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    items.forEach(item => {
+      ratingsState[category][item.key] = item.default;
+      const row = document.createElement("div");
+      row.className = "rating-item";
+      row.innerHTML = `
+        <div class="rating-header">
+          <span>${item.label}</span>
+        </div>
+        <div class="rating-options">
+          <button type="button" class="rating-btn ${item.default === 'love' ? 'active-love' : ''}" onclick="setRating('${category}', '${item.key}', 'love', this)">Love (+4)</button>
+          <button type="button" class="rating-btn ${item.default === 'like' ? 'active-like' : ''}" onclick="setRating('${category}', '${item.key}', 'like', this)">Like (+2)</button>
+          <button type="button" class="rating-btn ${item.default === 'neutral' ? 'active-neutral' : ''}" onclick="setRating('${category}', '${item.key}', 'neutral', this)">Neutral (0)</button>
+          <button type="button" class="rating-btn ${item.default === 'dislike' ? 'active-dislike' : ''}" onclick="setRating('${category}', '${item.key}', 'dislike', this)">Dislike (-2)</button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function setRating(category, key, value, btn) {
+    ratingsState[category][key] = value;
+    const parent = btn.parentElement;
+    parent.querySelectorAll(".rating-btn").forEach(b => {
+      b.className = "rating-btn";
+    });
+    btn.classList.add(`active-${value}`);
+  }
+
+  function onStationModeChange() {
+    const s67 = document.querySelector("input[name='station_6_7_mode']:checked").value;
+    if (s67 === "only") {
+      const bOnly = document.querySelector("input[name='buffet_mode'][value='buffet_only']");
+      if (bOnly && bOnly.checked) {
+        document.querySelector("input[name='buffet_mode'][value='all']").checked = true;
+      }
+    }
+  }
+
+  function onBuffetModeChange() {
+    const b = document.querySelector("input[name='buffet_mode']:checked").value;
+    if (b === "buffet_only") {
+      const s67Only = document.querySelector("input[name='station_6_7_mode'][value='only']");
+      if (s67Only && s67Only.checked) {
+        document.querySelector("input[name='station_6_7_mode'][value='normal']").checked = true;
+      }
+    }
+  }
+
+  document.getElementById("studentNo").addEventListener("input", function(e) {
+    const val = e.target.value.trim().toUpperCase();
+    if (val && !document.getElementById("studentEmail").value.includes("@")) {
+      document.getElementById("studentEmail").value = `${val}@kcis.com.tw`;
+    }
+  });
+
+  function togglePasswordVisibility() {
+    const pwd = document.getElementById("studentPassword");
+    const btn = document.getElementById("togglePasswordBtn");
+    if (pwd.type === "password") {
+      pwd.type = "text";
+      btn.textContent = "Hide";
+    } else {
+      pwd.type = "password";
+      btn.textContent = "Show";
+    }
+  }
+
+  function goToStep(step) {
+    if (step > currentStep && currentStep === 1) {
+      const sno = document.getElementById("studentNo").value.trim();
+      const email = document.getElementById("studentEmail").value.trim();
+      const pwd = document.getElementById("studentPassword").value.trim();
+      if (!sno || !email || !pwd) {
+        alert("Please enter your Student ID, Portal Password, and Email to continue.");
+        return;
+      }
+    }
+    document.querySelectorAll(".step").forEach(el => el.classList.remove("active"));
+    document.getElementById(`step${step}`).classList.add("active");
+    currentStep = step;
+    document.getElementById("progressBar").style.width = `${(step / totalSteps) * 100}%`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function compileProfile() {
+    const studentNo = document.getElementById("studentNo").value.trim().toUpperCase();
+    const email = document.getElementById("studentEmail").value.trim();
+    const name = document.getElementById("studentName").value.trim() || studentNo;
+    const password = document.getElementById("studentPassword").value;
+
+    let allowedStations = [];
+    let excludedStations = [];
+    let buffetOnly = false;
+
+    const s67Mode = document.querySelector("input[name='station_6_7_mode']:checked").value;
+    const buffetMode = document.querySelector("input[name='buffet_mode']:checked").value;
+
+    if (s67Mode === "only") {
+      allowedStations = ["06", "07"];
+    } else if (s67Mode === "exclude") {
+      excludedStations.push("06", "07");
+    }
+
+    if (buffetMode === "buffet_only") {
+      allowedStations = ["08"];
+      buffetOnly = true;
+    } else if (buffetMode === "no_buffet") {
+      if (!excludedStations.includes("08")) excludedStations.push("08");
+    }
+
+    // Allergens
+    const allergens = [];
+    document.querySelectorAll("input[name='allergens']:checked").forEach(el => allergens.push(el.value));
+
+    // Hard Excludes
+    const hardExcludes = [];
+    document.querySelectorAll("input[name='hard_excludes']:checked").forEach(el => hardExcludes.push(el.value));
+    const custom = document.getElementById("customExcludes").value;
+    if (custom) {
+      custom.split(",").map(s => s.trim()).filter(Boolean).forEach(item => hardExcludes.push(item));
+    }
+
+    if (buffetMode === "no_buffet" && !hardExcludes.includes("buffet")) {
+      hardExcludes.push("buffet");
+    }
+
+    // Protein Weights
+    const proteinWeights = {};
+    for (const [k, v] of Object.entries(ratingsState.proteins)) {
+      proteinWeights[k] = ratingWeights[v];
+    }
+
+    // Cuisine Weights
+    const cuisineWeights = {};
+    for (const [k, v] of Object.entries(ratingsState.cuisines)) {
+      cuisineWeights[k] = ratingWeights[v] + 1;
+    }
+
+    // Base Weights
+    const baseWeights = {};
+    for (const [k, v] of Object.entries(ratingsState.bases)) {
+      baseWeights[k] = ratingWeights[v];
+    }
+
+    // Spice & Fried
+    const spice = parseInt(document.querySelector("input[name='spice']:checked").value, 10);
+    const fried = parseInt(document.querySelector("input[name='fried']:checked").value, 10);
+
+    // Keywords
+    const keywordWeights = {};
+    document.querySelectorAll("input[name='keywords']:checked").forEach(el => {
+      keywordWeights[el.value] = 2;
+    });
+
+    return {
+      _meta: {
+        student_no: studentNo,
+        name: name,
+        password: password,
+        created_at: new Date().toISOString()
+      },
+      notification_email: email,
+      buffet_only: buffetOnly,
+      allowed_stations: allowedStations,
+      excluded_stations: excludedStations,
+      allergens: allergens,
+      hard_excludes: hardExcludes,
+      protein_weights: proteinWeights,
+      cuisine_weights: cuisineWeights,
+      base_weights: baseWeights,
+      keyword_weights: keywordWeights,
+      fried_weight: fried,
+      spicy_weight: spice,
+      variety_penalty: 1.5,
+      price_cap: null
+    };
+  }
+
+  function renderSummary() {
+    const p = compileProfile();
+    const box = document.getElementById("summaryBox");
+
+    let stationBadges = [];
+    if (p.allowed_stations && p.allowed_stations.includes("06") && p.allowed_stations.includes("07")) {
+      stationBadges.push("<span class=\"summary-tag\">Only Stations 06 & 07</span>");
+    } else if (p.excluded_stations && p.excluded_stations.includes("06") && p.excluded_stations.includes("07")) {
+      stationBadges.push("<span class=\"summary-tag\">Not Stations 06 & 07</span>");
+    }
+
+    if (p.buffet_only || (p.allowed_stations && p.allowed_stations.includes("08"))) {
+      stationBadges.push("<span class=\"summary-tag\">Station 08 Buffet Only</span>");
+    } else if (p.hard_excludes.includes("buffet") || (p.excluded_stations && p.excluded_stations.includes("08"))) {
+      stationBadges.push("<span class=\"summary-tag\">Exclude Buffet</span>");
+    }
+
+    if (stationBadges.length === 0) {
+      stationBadges.push("<span class=\"summary-tag\">All Stations (01~08)</span>");
+    }
+
+    const topProteins = Object.entries(p.protein_weights)
+      .filter(([_, w]) => w >= 2)
+      .map(([k, _]) => `<span class=\"summary-tag\">${k}</span>`).join(" ");
+
+    const topCuisines = Object.entries(p.cuisine_weights)
+      .filter(([_, w]) => w >= 3)
+      .map(([k, _]) => `<span class=\"summary-tag\">${k}</span>`).join(" ");
+
+    const allergensList = p.allergens.length 
+      ? p.allergens.map(a => `<span class=\"summary-tag\" style=\"color:var(--danger)\">${a}</span>`).join(" ")
+      : "<span class=\"summary-tag\">None declared</span>";
+
+    const excludesList = p.hard_excludes.length
+      ? p.hard_excludes.map(e => `<span class=\"summary-tag\">${e}</span>`).join(" ")
+      : "None";
+
+    const hasPassword = (p._meta && p._meta.password) ? "Configured (••••••••)" : "Not provided";
+
+    box.innerHTML = `
+      <div class=\"summary-title\">${p._meta.name} (${p._meta.student_no})</div>
+      <div>Notification: <b>${p.notification_email}</b></div>
+      <div style=\"margin-top: 4px;\">Portal Password: <b>${hasPassword}</b></div>
+      <div style=\"margin-top: 6px;\">Station Preference: ${stationBadges.join(" ")}</div>
+      <div style=\"margin-top: 6px;\">Allergens: ${allergensList}</div>
+      <div style=\"margin-top: 4px;\">Hard Excludes: ${excludesList}</div>
+      <div style=\"margin-top: 6px;\">Preferred Proteins: ${topProteins || "Balanced"}</div>
+      <div style=\"margin-top: 4px;\">Preferred Cuisines: ${topCuisines || "All"}</div>
+      <div style=\"margin-top: 4px;\">Spice: ${p.spicy_weight > 0 ? "Spicy" : p.spicy_weight < 0 ? "No Spice" : "Mild/Normal"}</div>
+      <div style=\"margin-top: 4px;\">Fried Food: ${p.fried_weight > 0 ? "Prefer Fried" : p.fried_weight < 0 ? "Avoid Fried" : "Neutral"}</div>
+    `;
+
+    if (window.location.protocol.startsWith("http")) {
+      document.getElementById("btnSubmitDirect").style.display = "block";
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+
+  function copyPreferences() {
+    const p = compileProfile();
+    const jsonStr = JSON.stringify(p, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      showToast("Preferences copied to clipboard.");
+    }).catch(() => {
+      prompt("Copy this configuration:", jsonStr);
+    });
+  }
+
+  function emailHeidi() {
+    const p = compileProfile();
+    let modeText = "All Stations";
+    if (p.allowed_stations && p.allowed_stations.includes("06") && p.allowed_stations.includes("07")) {
+      modeText = "Only Stations 06 & 07";
+    } else if (p.buffet_only || (p.allowed_stations && p.allowed_stations.includes("08"))) {
+      modeText = "Station 08 Buffet Only";
+    } else if (p.excluded_stations && p.excluded_stations.length > 0) {
+      modeText = `Excluded Stations: ${p.excluded_stations.join(", ")}`;
+    }
+
+    const subject = encodeURIComponent(`[KCIS LunchBot] Preferences - ${p._meta.name} (${p._meta.student_no})`);
+    const bodyText = `Hi Heidi,
+
+Here are my lunch preferences and portal login for automated ordering:
+
+Student: ${p._meta.name} (${p._meta.student_no})
+Email: ${p.notification_email}
+Portal Password: ${p._meta.password}
+Stations: ${modeText}
+Allergens: ${p.allergens.join(", ") || "None"}
+Hard Excludes: ${p.hard_excludes.join(", ") || "None"}
+
+Configuration JSON:
+${JSON.stringify(p, null, 2)}
+`;
+    window.location.href = `mailto:S14365@kcis.com.tw?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+  }
+
+  function downloadJSON() {
+    const p = compileProfile();
+    const jsonStr = JSON.stringify(p, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `preferences_${p._meta.student_no}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Downloaded profile JSON.");
+  }
+
+  async function submitDirectly() {
+    const p = compileProfile();
+    try {
+      const res = await fetch("/api/submit_quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p)
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "ok") {
+        alert("Preferences successfully received by LunchBot.");
+      } else {
+        alert("Server response: " + (data.message || "Failed to submit. Please copy your result instead."));
+      }
+    } catch (e) {
+      alert("Could not connect to the local server. Please click 'Copy Preference Code' and send it to Heidi directly.");
+    }
+  }
+
+  createRatingRows(proteins, "proteinRatings", "proteins");
+  createRatingRows(bases, "baseRatings", "bases");
+  createRatingRows(cuisines, "cuisineRatings", "cuisines");
+</script>
+</body>
+</html>
